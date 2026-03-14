@@ -1,0 +1,9 @@
+node_modules/
+temp/
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+dist/
+.DS_Store
