@@ -12,7 +12,6 @@ function isValidGitHubUrl(url) {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:') return false
     if (parsed.hostname !== 'github.com') return false
-    // pathname should be exactly /owner/repo
     const parts = parsed.pathname.replace(/^\/|\/$/g, '').split('/')
     if (parts.length !== 2) return false
     if (!parts[0] || !parts[1]) return false
@@ -88,9 +87,13 @@ function HeroIllustration() {
 
 /**
  * Step 1 — Landing / Input screen.
- * @param {{ onSubmit: (url: string) => void, errorMessage?: string }} props
+ * @param {{
+ *   onSubmit: (url: string) => void,
+ *   errorMessage?: string,
+ *   loading?: boolean,
+ * }} props
  */
-export default function LandingScreen({ onSubmit, errorMessage }) {
+export default function LandingScreen({ onSubmit, errorMessage, loading = false }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
   const [touched, setTouched] = useState(false)
@@ -117,6 +120,7 @@ export default function LandingScreen({ onSubmit, errorMessage }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (loading) return
     setTouched(true)
     const err = validate(url)
     setError(err)
@@ -142,7 +146,7 @@ export default function LandingScreen({ onSubmit, errorMessage }) {
 
         <p className="hero-subtitle">
           Paste a repository URL and CodeAtlas maps every dependency, flags security
-          risks, and generates an interactive visual blueprint — powered by Claude AI.
+          risks, and generates an interactive visual blueprint — powered by AI.
         </p>
 
         <form className="landing-form" onSubmit={handleSubmit} noValidate>
@@ -158,9 +162,10 @@ export default function LandingScreen({ onSubmit, errorMessage }) {
             spellCheck="false"
             aria-label="GitHub repository URL"
             aria-describedby={error ? 'url-error' : undefined}
+            disabled={loading}
           />
 
-          {error && (
+          {error && !loading && (
             <p className="error-msg" id="url-error" role="alert">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
                 <circle cx="6.5" cy="6.5" r="6" stroke="#d93025" strokeWidth="1" />
@@ -171,12 +176,23 @@ export default function LandingScreen({ onSubmit, errorMessage }) {
             </p>
           )}
 
-          <button className="submit-btn" type="submit">
-            Start Audit &rarr;
-          </button>
+          {loading ? (
+            <div className="clone-loading-state" role="status" aria-live="polite">
+              <div className="spinner-dots spinner-dots--inline">
+                <span className="spinner-dot" style={{ background: '#2952ff' }} />
+                <span className="spinner-dot" style={{ background: '#2952ff' }} />
+                <span className="spinner-dot" style={{ background: '#2952ff' }} />
+              </div>
+              <span className="clone-loading-text">Cloning repository...</span>
+            </div>
+          ) : (
+            <button className="submit-btn" type="submit">
+              Start Audit &rarr;
+            </button>
+          )}
         </form>
 
-        {errorMessage && (
+        {errorMessage && !loading && (
           <div className="server-error" role="alert">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{marginRight: 6, flexShrink: 0}}>
               <circle cx="7" cy="7" r="6.5" stroke="#c0392b" strokeWidth="1" />

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-react-app:*)",
+      "Bash(npm create:*)",
+      "Bash(echo:*)",
+      "Read(//Users/robert/Desktop/**)",
+      "Bash(npx create-vite@latest qadna --template react)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:www.qadna.co)",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(mkdir:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(grep:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}
