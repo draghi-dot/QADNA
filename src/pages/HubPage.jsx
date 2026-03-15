@@ -3,7 +3,7 @@
  *
  * Renders the 4-card hub.
  * - "Visual Map" card → /hub/visual-map (graph view)
- * - "Explore" card    → /hub/explore    (project explorer)
+ * - "Dashboard" card  → /hub/dashboard  (repo dashboard)
  * If no repoId in context, redirects to /.
  */
 
@@ -34,7 +34,8 @@ export default function HubPage() {
       repoUrl={repoUrl}
       onReset={handleReset}
       onOpenMap={() => navigate('/hub/visual-map')}
-      onOpenExplore={() => navigate('/hub/explore')}
+      onOpenDashboard={() => navigate('/hub/dashboard')}
+      onOpenWhatToFix={() => navigate('/hub/what-to-fix')}
     />
   )
 }

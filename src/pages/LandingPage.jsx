@@ -9,10 +9,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import LandingScreen from '../components/LandingScreen'
 import { useRepo } from '../context/RepoContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const { setRepo } = useRepo()
+  const { user } = useAuth()
 
   const [cloneError, setCloneError] = useState(null)
   const [cloning,    setCloning]    = useState(false)
@@ -29,7 +31,7 @@ export default function LandingPage() {
       const res = await fetch('/api/repo/clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: url }),
+        body: JSON.stringify({ repoUrl: url, userEmail: user?.email || '', uid: user?.uid || '' }),
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))

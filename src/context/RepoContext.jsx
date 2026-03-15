@@ -7,9 +7,10 @@
  *   mapReady, setMapReady              — whether the graph build has finished
  *   graphJobRef                        — ref that holds the in-flight fetch promise
  *   clearRepo()                        — reset everything (New Audit)
+ *   sessionLoading                     — true while checking for a saved session
  */
 
-import { createContext, useContext, useState, useRef, useCallback } from 'react'
+import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react'
 
 const RepoContext = createContext(null)
 
@@ -18,7 +19,23 @@ export function RepoProvider({ children }) {
   const [repoUrl,  setRepoUrl]  = useState('')
   const [repoName, setRepoName] = useState('')
   const [mapReady, setMapReady] = useState(false)
+  const [sessionLoading, setSessionLoading] = useState(true)
   const graphJobRef             = useRef(null)
+
+  // On mount: check for a saved session in Firestore
+  useEffect(() => {
+    fetch('/api/session/last')
+      .then(r => r.json())
+      .then(data => {
+        if (data.audit && data.audit.auditId) {
+          setRepoId(data.audit.auditId)
+          setRepoUrl(data.audit.repoUrl || '')
+          setRepoName(data.audit.repoName || '')
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSessionLoading(false))
+  }, [])
 
   const setRepo = useCallback(({ id, url, name }) => {
     setRepoId(id)
@@ -43,6 +60,7 @@ export function RepoProvider({ children }) {
       mapReady, setMapReady,
       graphJobRef,
       clearRepo,
+      sessionLoading,
     }}>
       {children}
     </RepoContext.Provider>

@@ -64,7 +64,7 @@ function DonutChart({ langs, totalFiles }) {
       <svg className="ge-donut-svg" viewBox={`0 0 ${SIZE} ${SIZE}`}
         aria-label="Language distribution donut chart">
         <circle cx={CX} cy={CY} r={(R_OUT + R_IN) / 2}
-          fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={R_OUT - R_IN} />
+          fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth={R_OUT - R_IN} />
         {slices.map((s, i) => {
           if (s.pct < 0.3) return null
           const isHov  = hovered === i
@@ -88,18 +88,18 @@ function DonutChart({ langs, totalFiles }) {
           <>
             <text x={CX} y={CY - 10} textAnchor="middle" fill={hov.color}
               fontSize="14" fontWeight="700" fontFamily="Inter, sans-serif">{hov.name}</text>
-            <text x={CX} y={CY + 9} textAnchor="middle" fill="rgba(255,255,255,0.85)"
+            <text x={CX} y={CY + 9} textAnchor="middle" fill="#0a0a0a"
               fontSize="13" fontFamily="Inter, sans-serif">{hov.pct.toFixed(1)}%</text>
-            <text x={CX} y={CY + 26} textAnchor="middle" fill="rgba(255,255,255,0.4)"
+            <text x={CX} y={CY + 26} textAnchor="middle" fill="#7a7a8a"
               fontSize="10" fontFamily="Inter, sans-serif">
               {hov.count} file{hov.count !== 1 ? 's' : ''}
             </text>
           </>
         ) : (
           <>
-            <text x={CX} y={CY - 6} textAnchor="middle" fill="rgba(255,255,255,0.6)"
+            <text x={CX} y={CY - 6} textAnchor="middle" fill="#4a4a5a"
               fontSize="12" fontWeight="600" fontFamily="Inter, sans-serif">{totalFiles} files</text>
-            <text x={CX} y={CY + 12} textAnchor="middle" fill="rgba(255,255,255,0.25)"
+            <text x={CX} y={CY + 12} textAnchor="middle" fill="#7a7a8a"
               fontSize="10" fontFamily="Inter, sans-serif">hover to inspect</text>
           </>
         )}
@@ -126,7 +126,7 @@ function FolderIcon({ open }) {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-        stroke={open ? '#60a5fa' : 'rgba(255,255,255,0.35)'}
+        stroke={open ? '#1a6bff' : '#7a7a8a'}
         strokeWidth="1.6" fill={open ? 'rgba(96,165,250,0.15)' : 'none'} strokeLinejoin="round" />
     </svg>
   )
@@ -140,7 +140,7 @@ const EXT_COLORS = {
 }
 
 function FileIcon({ ext }) {
-  const color = EXT_COLORS[ext] || 'rgba(255,255,255,0.25)'
+  const color = EXT_COLORS[ext] || '#7a7a8a'
   return (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
@@ -154,7 +154,7 @@ function ChevronRight({ open }) {
   return (
     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"
       style={{ flexShrink: 0, transition: 'transform 0.18s ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-      <polyline points="9 18 15 12 9 6" stroke="rgba(255,255,255,0.3)"
+      <polyline points="9 18 15 12 9 6" stroke="#7a7a8a"
         strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )

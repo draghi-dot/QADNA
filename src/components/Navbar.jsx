@@ -1,52 +1,44 @@
-/**
- * Navbar — centered blue pill capsule with QADNA brand, nav links, and CTA.
- * @param {{ onStartAudit?: () => void }} props
- */
+import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
-import { Link, useNavigate } from 'react-router-dom'
-
-export default function Navbar({ onStartAudit }) {
-  const navigate = useNavigate()
-
-  function handleStartAudit() {
-    if (onStartAudit) {
-      onStartAudit()
-    } else {
-      navigate('/')
-    }
-  }
+export default function Navbar({ className = '', leftAction = null }) {
+  const { user, openProfile } = useAuth()
 
   return (
-    <nav className="navbar" aria-label="Main navigation">
-      <div className="navbar-pill">
-        {/* Brand */}
-        <Link className="navbar-brand" to="/" aria-label="QADNA home">
-          <span className="navbar-brand-icon" aria-hidden="true">
-            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="5" height="5" rx="1" fill="#2952ff" />
-              <rect x="8" y="1" width="5" height="5" rx="1" fill="#2952ff" />
-              <rect x="1" y="8" width="5" height="5" rx="1" fill="#2952ff" />
-              <rect x="8" y="8" width="5" height="5" rx="1" fill="#2952ff" opacity="0.4" />
-            </svg>
-          </span>
-          <span className="navbar-brand-name">QADNA</span>
-        </Link>
-
-        {/* Nav links */}
-        <div className="navbar-links">
-          <button className="navbar-link" type="button">Features</button>
-          <button className="navbar-link" type="button">Docs</button>
-          <button className="navbar-link" type="button">About</button>
+    <nav className={`navbar${className ? ' ' + className : ''}`} aria-label="Main navigation">
+      <div className="navbar-inner">
+        <div className="navbar-left">
+          <Link className="navbar-brand" to="/" aria-label="QADNA home">
+            <div className="navbar-brand-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </div>
+            <span className="navbar-brand-name">QADNA</span>
+          </Link>
+          {leftAction}
         </div>
 
-        {/* CTA */}
         <button
-          className="navbar-cta"
+          className="navbar-profile-btn"
           type="button"
-          onClick={handleStartAudit}
-          aria-label="Start a new audit"
+          onClick={openProfile}
+          aria-label="Open profile"
         >
-          Start Audit
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt=""
+              className="navbar-avatar"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          )}
         </button>
       </div>
     </nav>

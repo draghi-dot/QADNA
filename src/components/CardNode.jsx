@@ -1,129 +1,175 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { FileCode, AlertTriangle, ChevronDown, ChevronUp, ArrowRight, ArrowLeft } from 'lucide-react';
+import { FileCode, AlertTriangle } from 'lucide-react';
+
+// Inject tour pulse keyframe once
+if (typeof document !== 'undefined' && !document.getElementById('tour-pulse-style')) {
+  const style = document.createElement('style');
+  style.id = 'tour-pulse-style';
+  style.textContent = `
+    @keyframes tourPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(26,107,255,0.5), 0 1px 4px rgba(0,0,0,0.06); }
+      50% { box-shadow: 0 0 0 8px rgba(26,107,255,0), 0 1px 4px rgba(0,0,0,0.06); }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default memo(({ data, selected }) => {
-  const [expanded, setExpanded] = useState(false);
+  const impactScore     = data.impactScore || 0;
+  const isTourHighlight = data.isTourHighlight || false;
+  const riskFlags       = data.riskFlags || [];
+  const hasHighRisk     = riskFlags.some(f => f.severity === 'high');
+  const hasMediumRisk   = riskFlags.some(f => f.severity === 'medium');
 
-  const getRiskColor = (complexity) => {
-    if (complexity >= 8) return 'text-red-400 border-red-400/30 bg-red-400/10';
-    if (complexity >= 5) return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10';
-    return 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10';
+  const impactColor =
+    impactScore >= 10 ? 'text-red-600 border-red-200 bg-red-50' :
+    impactScore >= 5  ? 'text-orange-600 border-orange-200 bg-orange-50' :
+    impactScore >= 1  ? 'text-[#4a4a5a] border-black/[0.07] bg-[#fcfcfc]' :
+                        'text-[#7a7a8a] border-black/[0.07] bg-[#fcfcfc]';
+
+  const handleImpactClick = (e) => {
+    e.stopPropagation();
+    if (data.onImpactClick && impactScore > 0) {
+      data.onImpactClick(data.id, data.affectedNodes || []);
+    }
   };
 
-  const riskColor = getRiskColor(data.complexity || 0);
+  const baseBorder = isTourHighlight
+    ? '2.5px solid #1a6bff'
+    : data.isEntryPoint
+      ? '2.5px solid #f59e0b'
+      : selected
+        ? '2px solid #1a6bff'
+        : '1px solid rgba(0,0,0,0.07)';
+
+  const hasRiskBorder = !isTourHighlight && !data.isEntryPoint && riskFlags.length > 0;
+  const borderLeftStyle = hasRiskBorder
+    ? `3px solid ${hasHighRisk ? '#ef4444' : '#f59e0b'}`
+    : baseBorder;
+
+  const shadowStyle = isTourHighlight
+    ? undefined
+    : data.isEntryPoint
+      ? '0 0 16px rgba(245,158,11,0.24)'
+      : selected
+        ? '0 0 0 3px rgba(26,107,255,0.1)'
+        : '0 1px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04)';
 
   return (
     <div
-      className={`relative bg-zinc-900 border-2 rounded-xl shadow-xl transition-all duration-200 ${
-        selected ? 'border-blue-500 shadow-blue-500/20' : 'border-zinc-700 hover:border-zinc-500'
-      } ${expanded ? 'w-96 z-50' : 'w-64 z-10'}`}
-      style={{ zIndex: expanded ? 50 : (selected ? 40 : 10) }}
+      className="relative rounded-xl w-56 cursor-pointer select-none transition-all duration-150"
+      style={{
+        background: '#ffffff',
+        borderTop: baseBorder,
+        borderRight: baseBorder,
+        borderBottom: baseBorder,
+        borderLeft: borderLeftStyle,
+        boxShadow: shadowStyle,
+        animation: isTourHighlight ? 'tourPulse 1.5s ease-in-out infinite' : 'none',
+      }}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-blue-500 border-2 border-zinc-900" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ width: 8, height: 8, background: '#1a6bff', border: '2px solid #fff' }}
+      />
 
-      <div
-        className="p-4 cursor-pointer flex flex-col gap-3"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <FileCode className="w-5 h-5 text-blue-400 shrink-0" />
-            <div className="flex flex-col overflow-hidden">
-              <span className="font-semibold text-zinc-100 truncate" title={data.label}>
-                {data.label}
-              </span>
-              <span className="text-xs text-zinc-400 truncate" title={data.id}>
-                {data.id}
-              </span>
-            </div>
-          </div>
-          <div className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold border ${riskColor}`}>
-            C: {data.complexity || 0}/10
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          <span className="px-2 py-0.5 bg-zinc-800 text-zinc-300 text-xs rounded-full border border-zinc-700">
-            {data.domain || data.group || 'core'}
-          </span>
-          <span className="px-2 py-0.5 bg-zinc-800 text-zinc-300 text-xs rounded-full border border-zinc-700">
-            {data.type || data.group || 'file'}
+      <div className="p-3 flex flex-col gap-1.5">
+        {/* Filename + icon */}
+        <div className="flex items-center gap-2 overflow-hidden">
+          <FileCode className="w-4 h-4 shrink-0" style={{ color: '#1a6bff' }} />
+          <span
+            className="font-semibold truncate text-sm leading-tight"
+            style={{ color: '#0a0a0a' }}
+            title={data.label}
+          >
+            {data.label}
           </span>
         </div>
 
-        {data.riskFlags && data.riskFlags.length > 0 && (
-          <div className="flex items-center gap-1 text-xs text-yellow-400">
-            <AlertTriangle className="w-3 h-3" />
-            <span>{data.riskFlags.length} risk flags</span>
-          </div>
+        {/* File path */}
+        <span
+          className="text-xs truncate leading-tight"
+          style={{ color: '#7a7a8a', fontFamily: 'SF Mono, Fira Code, monospace' }}
+          title={data.id}
+        >
+          {data.id}
+        </span>
+
+        {/* Intent summary */}
+        {data.intentSummary && (
+          <p className="text-xs italic leading-snug mt-0.5" style={{ color: '#4a4a5a' }}>
+            {data.intentSummary}
+          </p>
         )}
 
-        <div className="flex items-center justify-center mt-1 text-zinc-500">
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {/* Tags + impact row */}
+        <div className="flex items-center justify-between gap-1 mt-1 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span
+              className="px-1.5 py-0.5 text-xs rounded-full border"
+              style={{
+                background: 'rgba(0,0,0,0.04)',
+                color: '#7a7a8a',
+                borderColor: 'rgba(0,0,0,0.07)',
+              }}
+            >
+              {data.domain || data.group || 'file'}
+            </span>
+            {data.isEntryPoint && (
+              <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-xs rounded-full border border-amber-200 font-medium">
+                entry
+              </span>
+            )}
+            {isTourHighlight && (
+              <span
+                className="px-1.5 py-0.5 text-xs rounded-full border font-medium"
+                style={{
+                  background: 'rgba(26,107,255,0.07)',
+                  color: '#1a6bff',
+                  borderColor: 'rgba(26,107,255,0.18)',
+                }}
+              >
+                on tour
+              </span>
+            )}
+            {data.findingCount > 0 && (
+              <span className="px-1.5 py-0.5 bg-red-50 text-red-500 text-xs rounded-full border border-red-200 font-medium">
+                {data.findingCount} {data.findingCount === 1 ? 'issue' : 'issues'}
+              </span>
+            )}
+            {riskFlags.length > 0 && (
+              <span
+                className={`px-1.5 py-0.5 text-xs rounded-full border font-medium ${
+                  hasHighRisk ? 'bg-red-50 text-red-600 border-red-200' : 'bg-amber-50 text-amber-600 border-amber-200'
+                }`}
+                title={riskFlags.map(f => f.label).join(', ')}
+              >
+                {riskFlags.length} risk{riskFlags.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+
+          {/* Impact badge */}
+          {impactScore > 0 && (
+            <button
+              onClick={handleImpactClick}
+              title={`${impactScore} file${impactScore !== 1 ? 's' : ''} depend on this — click to highlight`}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold border shrink-0 hover:opacity-75 transition-opacity ${impactColor}`}
+            >
+              {impactScore >= 10 && <AlertTriangle className="w-3 h-3" />}
+              {impactScore} deps
+            </button>
+          )}
         </div>
       </div>
 
-      {expanded && (
-        <div className="p-4 pt-0 border-t border-zinc-800 flex flex-col gap-4 bg-zinc-900/95 rounded-b-xl">
-          {data.summary && (
-            <div className="mt-4 text-sm text-zinc-300 leading-relaxed">
-              {data.summary}
-            </div>
-          )}
-
-          {data.riskFlags && data.riskFlags.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Risk Flags</span>
-              <div className="flex flex-col gap-1">
-                {data.riskFlags.map((flag, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-sm text-yellow-400 bg-yellow-400/10 p-2 rounded-lg border border-yellow-400/20">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{flag}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {data.exports && data.exports.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                <ArrowRight className="w-3 h-3" /> Exports
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {data.exports.map((exp, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20 font-mono">
-                    {exp}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {data.imports && data.imports.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                <ArrowLeft className="w-3 h-3" /> Imports
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {data.imports.slice(0, 10).map((imp, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded-md border border-emerald-500/20 font-mono truncate max-w-full">
-                    {imp}
-                  </span>
-                ))}
-                {data.imports.length > 10 && (
-                  <span className="px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded-md border border-zinc-700">
-                    +{data.imports.length - 10} more
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-blue-500 border-2 border-zinc-900" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ width: 8, height: 8, background: '#1a6bff', border: '2px solid #fff' }}
+      />
     </div>
   );
 });

@@ -7,3 +7,5 @@ temp/
 .env.development
 dist/
 .DS_Store
+serviceAccountKey.json
+server/serviceAccountKey.json

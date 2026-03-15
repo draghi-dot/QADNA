@@ -29,3 +29,28 @@ The "generating experience" is a full screen between `landing` and `hub` (screen
 **Why:** Hackathon demo needs to wow judges — the 30-60s graph generation time is dead time without this. The explorer gives the user real data to interact with, making the wait feel productive.
 
 **How to apply:** When touching the generating screen or the three new API routes, refer to this pattern. The contributor parsing has a two-pass fallback because simple-git's custom `--format` parsing is unreliable.
+
+---
+
+## VisualMap graph enrichment (added 2026-03-14)
+
+After the graph loads and enters `ready` phase, three non-blocking enrichment fetches fire in parallel:
+
+1. **Entry point** (`POST /api/audit/entry-point`) — AI picks single best entry file + reading path (3-4 files). `entryPointId` drives amber border+glow on CardNode. `readingPath` drives animated amber edges between those nodes. A dismissable floating banner points at the entry point with reasoning text. Falls back to highest-`size` node.
+
+2. **Card summaries** (`POST /api/audit/card-summaries`) — Reads up to 2KB of each of the top 30 files, sends all in one AI prompt, gets back a `{ summaries: { fileId: "one sentence" } }` dict. Merged into `node.data.intentSummary` and shown as italic text on every CardNode (always visible, not in expanded section).
+
+3. **Flow query bar** (`POST /api/audit/flow-query`) — Pill-shaped search input at top-center of canvas. Submits `{ auditId, query }`. AI returns `{ path: string[], explanation: string }`. Path nodes highlighted in purple, non-path nodes dimmed 25%. Explanation shown in a panel below the bar.
+
+**Client-side features (no new endpoint needed):**
+- **Transitive impact BFS** — reverseAdj built from edge list (edges mean source imports target; reverse = who imports me). BFS from each nodeId gives `affectedNodes`. `impactScore = affectedNodes.length`. Badge on CardNode: red ≥10, orange ≥5, gray else. Clicking badge calls `onImpactClick` → `impactHighlight` state dims non-affected to 25% opacity, highlights affected edges orange.
+- **Dead node detection** — `size === 0` and not entry point and not in reading path → `isDead = true`. CardNode renders at 40% opacity + "◌ Unused" tag. Toggle button top-right: "Show all" / "Active only" (hides dead nodes when active only).
+
+**White theme applied across all graph components:**
+- Canvas: `#f8fafc`
+- Background dots: `#cbd5e1`
+- Cards: `bg-white`, `border-slate-200`, dark text
+- Group nodes: `rgba(241,245,249,0.85)` fill, `2px dashed #cbd5e1` border
+- Default edges: `#94a3b8`
+- Loading overlay: `background: #ffffff` (inline style overrides the `.vm-overlay` dark CSS)
+- Accent blue kept: `#2952ff`

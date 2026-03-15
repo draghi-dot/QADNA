@@ -1,20 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 
 const EXT_COLOR = {
-  js: '#f7df1e', jsx: '#61dafb', ts: '#3178c6', tsx: '#38bdf8',
+  js: '#f7df1e', jsx: '#1a6bff', ts: '#3178c6', tsx: '#38bdf8',
   py: '#3776ab', go: '#00add8', css: '#c084fc', html: '#f97316',
-  json: '#86efac', md: '#94a3b8',
+  json: '#86efac', md: '#7a7a8a',
 }
 
 function extColor(id = '') {
   const ext = id.split('.').pop()?.toLowerCase()
-  return EXT_COLOR[ext] || '#64748b'
+  return EXT_COLOR[ext] || '#7a7a8a'
 }
 
 export default function FileModal({ node, auditId, onClose }) {
-  const [aiState, setAiState]   = useState('idle') // idle | loading | done | error
-  const [aiText,  setAiText]    = useState('')
-  const bottomRef               = useRef(null)
+  const [aiState, setAiState] = useState('idle') // idle | loading | done | error
+  const [aiText,  setAiText]  = useState('')
+  const [gitInfo, setGitInfo] = useState(null)
+  const bottomRef             = useRef(null)
 
   // Close on Escape
   useEffect(() => {
@@ -28,6 +29,19 @@ export default function FileModal({ node, auditId, onClose }) {
     if (aiState === 'loading') bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [aiText, aiState])
 
+  // Fetch git info on mount
+  useEffect(() => {
+    if (!auditId || !node?.id) return
+    fetch('/api/audit/file-git-info', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ auditId, filePath: node.id }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setGitInfo(data) })
+      .catch(() => {})
+  }, [auditId, node?.id])
+
   async function askPurpose() {
     if (aiState !== 'idle') return
     setAiState('loading')
@@ -35,9 +49,9 @@ export default function FileModal({ node, auditId, onClose }) {
 
     try {
       const res = await fetch('/api/audit/file-purpose', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auditId, filePath: node.id }),
+        body:    JSON.stringify({ auditId, filePath: node.id }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -72,74 +86,123 @@ export default function FileModal({ node, auditId, onClose }) {
   const ext   = node.id.split('.').pop()?.toLowerCase() || 'file'
 
   return (
-    /* Backdrop */
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'rgba(0,0,0,0.35)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backdropFilter: 'blur(4px)',
-        padding: 24,
+        padding: 20,
       }}
     >
-      {/* Card — stop click propagation so clicking inside doesn't close */}
+      {/* Card */}
       <div
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`File details: ${node.label}`}
         style={{
-          background: '#18181b',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 20,
-          boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-          width: '100%', maxWidth: 580,
+          background: '#ffffff',
+          border: '1px solid rgba(0,0,0,0.07)',
+          borderRadius: 12,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.14)',
+          width: '100%', maxWidth: 520,
           maxHeight: '80vh',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{
+          padding: '16px 20px 14px',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          flexShrink: 0,
+        }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-              {/* File type dot */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+              {/* File type badge */}
               <div style={{
-                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: color + '22', border: `1.5px solid ${color}55`,
+                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                background: color + '10', border: `1px solid ${color}28`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: '0.02em' }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, color,
+                  letterSpacing: '0.04em',
+                  fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                }}>
                   {ext.slice(0, 3).toUpperCase()}
                 </span>
               </div>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{
+                  fontSize: 14, fontWeight: 600, color: '#0a0a0a', margin: 0,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  letterSpacing: '-0.01em',
+                }}>
                   {node.label}
                 </p>
-                <p style={{ fontSize: 12, color: '#64748b', margin: '3px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{
+                  fontSize: 11, color: '#7a7a8a', margin: '2px 0 0',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                }}>
                   {node.id}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              style={{ flexShrink: 0, background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: '#94a3b8', fontSize: 18, lineHeight: '32px', textAlign: 'center' }}
+              aria-label="Close"
+              style={{
+                flexShrink: 0, background: 'none',
+                border: '1px solid rgba(0,0,0,0.07)',
+                borderRadius: 6, width: 28, height: 28, cursor: 'pointer',
+                color: '#7a7a8a', fontSize: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              ×
+              &#x2715;
             </button>
           </div>
 
           {/* Meta badges */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-            <span style={{ padding: '3px 10px', borderRadius: 999, background: color + '18', color, fontSize: 12, fontWeight: 600, border: `1px solid ${color}33` }}>
-              {node.group || ext}
+          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+            <span style={{
+              padding: '2px 8px', borderRadius: 100,
+              background: color + '0e', color, fontSize: 10, fontWeight: 700,
+              border: `1px solid ${color}22`,
+              fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+            }}>
+              .{ext}
             </span>
+            {node.group && node.group !== ext && (
+              <span style={{
+                padding: '2px 8px', borderRadius: 100, background: 'rgba(26,107,255,0.06)',
+                color: '#1a6bff', fontSize: 10, fontWeight: 600,
+                border: '1px solid rgba(26,107,255,0.12)',
+                fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+              }}>
+                {node.group}
+              </span>
+            )}
             {(node.size > 0) && (
-              <span style={{ padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
-                imported by {node.size} file{node.size !== 1 ? 's' : ''}
+              <span style={{
+                padding: '2px 8px', borderRadius: 100, background: 'rgba(0,0,0,0.03)',
+                color: '#7a7a8a', fontSize: 10, border: '1px solid rgba(0,0,0,0.06)',
+                fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+              }}>
+                {node.size} import{node.size !== 1 ? 's' : ''}
               </span>
             )}
             {node.findingCount > 0 && (
-              <span style={{ padding: '3px 10px', borderRadius: 999, background: '#ef444418', color: '#ef4444', fontSize: 12, fontWeight: 600, border: '1px solid #ef444433' }}>
+              <span style={{
+                padding: '2px 8px', borderRadius: 100, background: '#ef444408',
+                color: '#ef4444', fontSize: 10, fontWeight: 700,
+                border: '1px solid #ef444420',
+                fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+              }}>
                 {node.findingCount} issue{node.findingCount !== 1 ? 's' : ''}
               </span>
             )}
@@ -147,22 +210,113 @@ export default function FileModal({ node, auditId, onClose }) {
         </div>
 
         {/* Body — scrollable */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+
+          {/* Git metadata */}
+          {gitInfo && gitInfo.lastChanged && (
+            <div style={{
+              display: 'flex', gap: 20, marginBottom: 16,
+              padding: '10px 14px',
+              background: '#f7f7f8', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)',
+            }}>
+              <div>
+                <div style={{
+                  fontSize: 9, fontWeight: 700,
+                  fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                  color: '#7a7a8a', textTransform: 'uppercase',
+                  letterSpacing: '0.08em', marginBottom: 4,
+                }}>
+                  Last changed
+                </div>
+                <div style={{ fontSize: 12, color: '#0a0a0a', fontWeight: 500 }}>
+                  {gitInfo.lastChanged}
+                </div>
+              </div>
+              {gitInfo.message && (
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 9, fontWeight: 700,
+                    fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                    color: '#7a7a8a', textTransform: 'uppercase',
+                    letterSpacing: '0.08em', marginBottom: 4,
+                  }}>
+                    Commit
+                  </div>
+                  <div style={{
+                    fontSize: 12, color: '#4a4a5a',
+                    maxWidth: 200, overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                  }}>
+                    {gitInfo.message}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Git loading skeleton */}
+          {!gitInfo && auditId && (
+            <div style={{
+              display: 'flex', gap: 20, marginBottom: 16,
+              padding: '10px 14px',
+              background: '#f7f7f8', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)',
+            }}>
+              <div>
+                <div style={{
+                  fontSize: 9, fontWeight: 700,
+                  fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                  color: '#7a7a8a', textTransform: 'uppercase',
+                  letterSpacing: '0.08em', marginBottom: 5,
+                }}>Last changed</div>
+                <div style={{ width: 72, height: 10, borderRadius: 3, background: '#e8e8e8', animation: 'shimmer 1.4s ease infinite' }} />
+              </div>
+              <div>
+                <div style={{
+                  fontSize: 9, fontWeight: 700,
+                  fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                  color: '#7a7a8a', textTransform: 'uppercase',
+                  letterSpacing: '0.08em', marginBottom: 5,
+                }}>Commit</div>
+                <div style={{ width: 128, height: 10, borderRadius: 3, background: '#e8e8e8', animation: 'shimmer 1.4s ease infinite' }} />
+              </div>
+            </div>
+          )}
 
           {/* Findings list */}
           {node.findings && node.findings.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Security Findings</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{
+                fontSize: 9, fontWeight: 700,
+                fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                color: '#7a7a8a', textTransform: 'uppercase',
+                letterSpacing: '0.1em', marginBottom: 8,
+              }}>
+                Security Findings
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {node.findings.map((f, i) => {
                   const sev = f.severity?.toLowerCase()
-                  const c = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#3b82f6', info: '#6b7280' }[sev] || '#6b7280'
+                  const c = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#1a6bff', info: '#7a7a8a' }[sev] || '#7a7a8a'
                   return (
-                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px', borderRadius: 8, background: c + '10', border: `1px solid ${c}22` }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: c, padding: '1px 6px', borderRadius: 4, background: c + '22', flexShrink: 0, marginTop: 1 }}>
+                    <div key={i} style={{
+                      display: 'flex', gap: 9, alignItems: 'flex-start',
+                      padding: '8px 11px', borderRadius: 8,
+                      background: c + '08', border: `1px solid ${c}18`,
+                    }}>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700,
+                        fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                        color: c,
+                        padding: '2px 6px', borderRadius: 4,
+                        background: c + '14', flexShrink: 0, marginTop: 1,
+                        letterSpacing: '0.05em',
+                      }}>
                         {f.severity?.toUpperCase()}
                       </span>
-                      <span style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.5 }}>{f.type}: {f.description}</span>
+                      <span style={{ fontSize: 12.5, color: '#4a4a5a', lineHeight: 1.55 }}>
+                        {f.type}: {f.description}
+                      </span>
                     </div>
                   )
                 })}
@@ -176,41 +330,81 @@ export default function FileModal({ node, auditId, onClose }) {
               <button
                 onClick={askPurpose}
                 style={{
-                  width: '100%', padding: '13px 0', borderRadius: 12,
-                  background: 'linear-gradient(135deg, #2952ff, #38bdf8)',
+                  width: '100%', padding: '11px 0', borderRadius: 8,
+                  background: '#1a6bff',
                   border: 'none', cursor: 'pointer',
-                  fontSize: 14, fontWeight: 700, color: '#fff',
-                  letterSpacing: '0.01em',
-                  boxShadow: '0 4px 24px rgba(41,82,255,0.35)',
-                  transition: 'opacity 0.15s',
+                  fontSize: 13, fontWeight: 600, color: '#fff',
+                  letterSpacing: '-0.01em',
+                  boxShadow: '0 2px 10px rgba(26,107,255,0.22)',
+                  transition: 'background 0.15s, box-shadow 0.15s, transform 0.15s',
+                  fontFamily: 'IBM Plex Sans, sans-serif',
                 }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                onMouseEnter={e => { e.currentTarget.style.background = '#0050e6'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#1a6bff'; e.currentTarget.style.transform = 'translateY(0)' }}
               >
-                ✦ What is its purpose?
+                Explain purpose
               </button>
             )}
 
             {(aiState === 'loading' || aiState === 'done') && (
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: aiState === 'loading' ? '#38bdf8' : '#22c55e', boxShadow: aiState === 'loading' ? '0 0 6px #38bdf8' : 'none', animation: aiState === 'loading' ? 'pulse 1s infinite' : 'none' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: aiState === 'loading' ? '#38bdf8' : '#22c55e' }}>
-                    {aiState === 'loading' ? 'Analyzing…' : 'Analysis complete'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <div style={{
+                    width: 5, height: 5, borderRadius: '50%',
+                    background: aiState === 'loading' ? '#1a6bff' : '#22c55e',
+                    animation: aiState === 'loading' ? 'pulse 1s infinite' : 'none',
+                  }} />
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                    color: aiState === 'loading' ? '#1a6bff' : '#22c55e',
+                    textTransform: 'uppercase', letterSpacing: '0.07em',
+                  }}>
+                    {aiState === 'loading' ? 'Analyzing...' : 'Analysis complete'}
                   </span>
                 </div>
-                <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0 }}>
-                  {aiText}
-                  {aiState === 'loading' && <span style={{ display: 'inline-block', width: 8, height: 14, background: '#38bdf8', marginLeft: 2, borderRadius: 1, animation: 'blink 0.8s step-end infinite', verticalAlign: 'text-bottom' }} />}
-                </p>
-                <div ref={bottomRef} />
+                <div style={{
+                  padding: '12px 14px',
+                  background: '#f7f7f8',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: 8,
+                }}>
+                  <p style={{
+                    fontSize: 13, color: '#4a4a5a', lineHeight: 1.75,
+                    whiteSpace: 'pre-wrap', margin: 0,
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                  }}>
+                    {aiText}
+                    {aiState === 'loading' && (
+                      <span style={{
+                        display: 'inline-block', width: 6, height: 13, background: '#1a6bff',
+                        marginLeft: 2, borderRadius: 1,
+                        animation: 'blink 0.8s step-end infinite', verticalAlign: 'text-bottom',
+                      }} />
+                    )}
+                  </p>
+                  <div ref={bottomRef} />
+                </div>
               </div>
             )}
 
             {aiState === 'error' && (
-              <div style={{ padding: 14, borderRadius: 10, background: '#ef444412', border: '1px solid #ef444430' }}>
-                <p style={{ color: '#ef4444', fontSize: 13, margin: '0 0 10px' }}>Failed to get AI response: {aiText}</p>
-                <button onClick={() => { setAiState('idle'); setAiText('') }} style={{ fontSize: 12, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+              <div style={{
+                padding: 12, borderRadius: 8,
+                background: 'rgba(239,68,68,0.04)',
+                border: '1px solid rgba(239,68,68,0.15)',
+              }}>
+                <p style={{ color: '#d93025', fontSize: 12, margin: '0 0 8px', lineHeight: 1.5, fontFamily: 'IBM Plex Mono, SF Mono, monospace' }}>
+                  Failed: {aiText}
+                </p>
+                <button
+                  onClick={() => { setAiState('idle'); setAiText('') }}
+                  style={{
+                    fontSize: 11, color: '#7a7a8a', background: 'none',
+                    border: 'none', cursor: 'pointer', textDecoration: 'underline',
+                    padding: 0, fontFamily: 'IBM Plex Mono, SF Mono, monospace',
+                  }}
+                >
                   Try again
                 </button>
               </div>
@@ -220,8 +414,9 @@ export default function FileModal({ node, auditId, onClose }) {
       </div>
 
       <style>{`
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
     </div>
   )

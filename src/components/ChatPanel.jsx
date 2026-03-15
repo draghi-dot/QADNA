@@ -165,10 +165,61 @@ export default function ChatPanel({ repoId, repoName }) {
     }
   }
 
+  const generateDocs = useCallback(async () => {
+    if (!repoId || isStreaming) return
+
+    const userMsg = { id: crypto.randomUUID(), role: 'user', content: 'Generate documentation for this repository' }
+    const aiMsgId = crypto.randomUUID()
+    const aiMsg   = { id: aiMsgId, role: 'assistant', content: '', streaming: true }
+
+    setMessages(prev => [...prev, userMsg, aiMsg])
+    setIsStreaming(true)
+
+    try {
+      const res = await fetch('/api/audit/generate-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auditId: repoId }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let buf = ''
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const ev = JSON.parse(line.slice(6))
+            if (ev.type === 'delta') {
+              accumulated += ev.text
+              const text = accumulated
+              setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: text } : m))
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (err) {
+      setMessages(prev => prev.map(m =>
+        m.id === aiMsgId ? { ...m, content: `Failed to generate docs: ${err.message}`, streaming: false } : m
+      ))
+    } finally {
+      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, streaming: false } : m))
+      setIsStreaming(false)
+    }
+  }, [repoId, isStreaming])
+
   const handleToggle = () => {
     setOpen(o => !o)
     if (!open) {
-      setTimeout(() => inputRef.current?.focus(), 300)
+      setTimeout(() => inputRef.current?.focus(), 280)
     }
   }
 
@@ -181,7 +232,7 @@ export default function ChatPanel({ repoId, repoName }) {
         onClick={handleToggle}
         aria-label={open ? 'Close chat' : 'Open CodeAtlas AI chat'}
       >
-        <ChatIcon size={18} />
+        <ChatIcon size={15} />
         {!open && <span className="chat-toggle-label">AI</span>}
       </button>
 
@@ -191,11 +242,33 @@ export default function ChatPanel({ repoId, repoName }) {
         <div className="chat-panel-header">
           <div className="chat-panel-title">
             <div className="chat-panel-title-icon">
-              <ChatIcon size={14} />
+              <ChatIcon size={12} />
             </div>
             <span>CodeAtlas AI</span>
           </div>
         </div>
+
+        {/* Quick actions */}
+        {repoId && (
+          <div style={{ padding: '7px 12px', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={generateDocs}
+              disabled={isStreaming}
+              style={{
+                padding: '4px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
+                background: isStreaming ? 'rgba(0,0,0,0.03)' : 'rgba(26,107,255,0.08)',
+                border: '1px solid rgba(26,107,255,0.2)',
+                color: isStreaming ? '#94a3b8' : '#1a6bff',
+                cursor: isStreaming ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.01em',
+              }}
+            >
+              Generate docs
+            </button>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="chat-messages">
@@ -227,7 +300,7 @@ export default function ChatPanel({ repoId, repoName }) {
             {isStreaming ? (
               <span className="chat-send-spinner" />
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>

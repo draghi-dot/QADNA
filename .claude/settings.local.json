@@ -20,7 +20,15 @@
       "Bash(mkdir:*)",
       "Bash(ssh-keygen:*)",
       "Bash(grep:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(npx:*)",
+      "Bash(firebase:*)",
+      "Bash(gcloud projects:*)",
+      "Read(//opt/homebrew/Caskroom/**)",
+      "Read(//Users/robert/google-cloud-sdk/bin/**)",
+      "WebFetch(domain:prosol-ca.web.app)",
+      "Bash(git:*)",
+      "Bash(for line:*)"
     ]
   }
 }

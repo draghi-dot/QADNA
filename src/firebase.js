@@ -1,5 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from "firebase/app"
+import { getAuth, GoogleAuthProvider } from "firebase/auth"
+import { initializeFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: "AIzaSyD0An3Un19xMa-vB4ewaUysnY0iIRlH5Wc",
@@ -9,9 +10,13 @@ const firebaseConfig = {
   messagingSenderId: "458894737935",
   appId: "1:458894737935:web:cce4e9b073e4d11155597a",
   measurementId: "G-KB8S5J2GFG"
-};
+}
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+})
+const googleProvider = new GoogleAuthProvider()
 
-export { app, analytics };
+export { app, auth, db, googleProvider }

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import Navbar from './Navbar'
+import { useAuth } from '../context/AuthContext'
 
 /**
  * Validates that the input string matches the expected GitHub repo URL format:
@@ -21,69 +22,6 @@ function isValidGitHubUrl(url) {
   }
 }
 
-/**
- * Simple shield + code SVG illustration for the hero section.
- */
-function HeroIllustration() {
-  return (
-    <svg
-      width="480"
-      height="160"
-      viewBox="0 0 480 160"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      role="img"
-    >
-      {/* Code lines — left block */}
-      <rect x="0" y="20" width="140" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="0" y="40" width="100" height="12" rx="6" fill="#eef1ff" />
-      <rect x="0" y="60" width="120" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="0" y="80" width="80" height="12" rx="6" fill="#eef1ff" />
-      <rect x="0" y="100" width="130" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="0" y="120" width="90" height="12" rx="6" fill="#eef1ff" />
-
-      {/* Connector line */}
-      <line x1="155" y1="80" x2="185" y2="80" stroke="#d0d0d0" strokeWidth="1.5" strokeDasharray="4 3" />
-
-      {/* Center shield */}
-      <path
-        d="M240 20 L270 35 L270 80 Q270 108 240 118 Q210 108 210 80 L210 35 Z"
-        fill="#eef1ff"
-        stroke="#2952ff"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M240 44 L255 52 L255 79 Q255 96 240 102 Q225 96 225 79 L225 52 Z"
-        fill="#2952ff"
-        opacity="0.15"
-      />
-      {/* Shield checkmark */}
-      <polyline
-        points="230,73 237,81 252,64"
-        stroke="#2952ff"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Connector line */}
-      <line x1="295" y1="80" x2="325" y2="80" stroke="#d0d0d0" strokeWidth="1.5" strokeDasharray="4 3" />
-
-      {/* Code lines — right block */}
-      <rect x="340" y="20" width="140" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="340" y="40" width="110" height="12" rx="6" fill="#eef1ff" />
-      <rect x="340" y="60" width="130" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="340" y="80" width="90" height="12" rx="6" fill="#eef1ff" />
-      <rect x="340" y="100" width="120" height="12" rx="6" fill="#e5e5e5" />
-      <rect x="340" y="120" width="80" height="12" rx="6" fill="#eef1ff" />
-
-      {/* Blue accent dots at nodes */}
-      <circle cx="155" cy="80" r="4" fill="#2952ff" />
-      <circle cx="325" cy="80" r="4" fill="#2952ff" />
-    </svg>
-  )
-}
 
 /**
  * Step 1 — Landing / Input screen.
@@ -97,6 +35,7 @@ export default function LandingScreen({ onSubmit, errorMessage, loading = false 
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
   const [touched, setTouched] = useState(false)
+  const { user, hasPaid, authLoading, openProfile } = useAuth()
 
   const validate = useCallback((value) => {
     if (!value.trim()) return 'Enter a GitHub repository URL to continue.'
@@ -129,24 +68,62 @@ export default function LandingScreen({ onSubmit, errorMessage, loading = false 
     }
   }
 
-  // Scroll to the form when the navbar CTA is clicked
-  const scrollToForm = () => {
-    document.getElementById('repo-input')?.focus()
+  // Determine which CTA to show based on auth + payment state
+  const renderCta = () => {
+    if (authLoading) return null
+
+    if (!user) {
+      return (
+        <button className="submit-btn submit-btn--gate" type="button" onClick={openProfile}>
+          Sign in to continue
+        </button>
+      )
+    }
+
+    if (!hasPaid) {
+      return (
+        <button className="submit-btn submit-btn--gate" type="button" onClick={openProfile}>
+          Subscribe to analyze &mdash; $24.99/mo
+        </button>
+      )
+    }
+
+    // Fully authenticated + paid — normal flow
+    if (loading) {
+      return (
+        <div className="clone-loading-state" role="status" aria-live="polite">
+          <div className="spinner-dots spinner-dots--inline">
+            <span className="spinner-dot" />
+            <span className="spinner-dot" />
+            <span className="spinner-dot" />
+          </div>
+          <span className="clone-loading-text">Cloning repository...</span>
+        </div>
+      )
+    }
+
+    return (
+      <button className="submit-btn" type="submit">
+        Analyse repository &rarr;
+      </button>
+    )
   }
 
   return (
     <div className="screen landing-screen">
-      <Navbar onStartAudit={scrollToForm} />
+      <Navbar />
 
       <div className="landing-hero">
+        <span className="hero-eyebrow">CodeAtlas</span>
+
         <h1 className="hero-headline">
-          Audit any GitHub repo.<br />
-          <span className="blue">Find vulnerabilities fast.</span>
+          Navigate any codebase<br />
+          <span className="blue">in minutes, not days.</span>
         </h1>
 
         <p className="hero-subtitle">
-          Paste a repository URL and CodeAtlas maps every dependency, flags security
-          risks, and generates an interactive visual blueprint — powered by AI.
+          Paste a GitHub repository URL. QADNA maps every dependency,
+          traces data flows, and surfaces risk — powered by AI.
         </p>
 
         <form className="landing-form" onSubmit={handleSubmit} noValidate>
@@ -162,50 +139,37 @@ export default function LandingScreen({ onSubmit, errorMessage, loading = false 
             spellCheck="false"
             aria-label="GitHub repository URL"
             aria-describedby={error ? 'url-error' : undefined}
-            disabled={loading}
+            disabled={loading || !user || !hasPaid}
           />
 
           {error && !loading && (
             <p className="error-msg" id="url-error" role="alert">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                <circle cx="6.5" cy="6.5" r="6" stroke="#d93025" strokeWidth="1" />
-                <line x1="6.5" y1="3.5" x2="6.5" y2="7" stroke="#d93025" strokeWidth="1.5" strokeLinecap="round" />
-                <circle cx="6.5" cy="9.25" r="0.75" fill="#d93025" />
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="5.5" stroke="#f87171" strokeWidth="1" />
+                <line x1="6" y1="3.5" x2="6" y2="6.5" stroke="#f87171" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="6" cy="8.5" r="0.65" fill="#f87171" />
               </svg>
               {error}
             </p>
           )}
 
-          {loading ? (
-            <div className="clone-loading-state" role="status" aria-live="polite">
-              <div className="spinner-dots spinner-dots--inline">
-                <span className="spinner-dot" style={{ background: '#2952ff' }} />
-                <span className="spinner-dot" style={{ background: '#2952ff' }} />
-                <span className="spinner-dot" style={{ background: '#2952ff' }} />
-              </div>
-              <span className="clone-loading-text">Cloning repository...</span>
-            </div>
-          ) : (
-            <button className="submit-btn" type="submit">
-              Start Audit &rarr;
-            </button>
-          )}
+          {renderCta()}
         </form>
 
         {errorMessage && !loading && (
           <div className="server-error" role="alert">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{marginRight: 6, flexShrink: 0}}>
-              <circle cx="7" cy="7" r="6.5" stroke="#c0392b" strokeWidth="1" />
-              <line x1="7" y1="3.5" x2="7" y2="7.5" stroke="#c0392b" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="7" cy="10" r="0.75" fill="#c0392b" />
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{marginRight: 2, flexShrink: 0}}>
+              <circle cx="6" cy="6" r="5.5" stroke="#c0392b" strokeWidth="1" />
+              <line x1="6" y1="3.5" x2="6" y2="6.5" stroke="#c0392b" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="6" cy="8.5" r="0.65" fill="#c0392b" />
             </svg>
             {errorMessage}
           </div>
         )}
 
-        <div className="hero-illustration">
-          <HeroIllustration />
-        </div>
+        <p className="landing-social-proof">
+          <strong>12,847</strong> repositories mapped
+        </p>
       </div>
     </div>
   )
